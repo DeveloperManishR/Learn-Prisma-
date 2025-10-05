@@ -57,52 +57,67 @@ export const updatePost = async (req, res) => {
 };
 
 export const fetchPosts = async (req, res) => {
+  const page = req.query.page ||1;
+  const limit = req.query.limit||10
+
+  const skip=(page-1)*limit
   try {
     const allPosts = await prisma.post.findMany({
+      skip:skip,
+      take:limit,
       // include:{ // Only Fetch Comment 
       //   comment:true
       // }
 
-      // include :{
-      //   comment:{
-      //     include:{
-      //      // user :true // fetch whole data
-      //       user:{
-      //         select:{
-      //           name:true
-      //         }
-      //       }
-      //       }
-      //   }
-      // },
-      // orderBy: {
-      //   id: "desc",
-      // },
-      where:{
-        // comment_count:{
-        //   gt:1
-        // }
-        // title:{
-        //   startsWith:"H"
-        // }
+      include :{
+        comment:{
+          include:{
+           // user :true // fetch whole data
+            user:{
+              select:{
+                name:true
+              }
+            }
+            }
+        }
+      },
+      orderBy: {
+        id: "desc",
+      },
+      // where:{
+      //   // comment_count:{
+      //   //   gt:1
+      //   // }
+      //   // title:{
+      //   //   startsWith:"H"
+      //   // }
       
-        // and and or condtion inwhich and is used for both condtion are true 
-        OR:[
-          {
-            title:{
-              startsWith:"H"
-            }
-          },
-          {
-            title:{
-              startsWith:"T"
-            }
-          },
+      //   // and and or condtion inwhich and is used for both condtion are true 
+      //   OR:[
+      //     {
+      //       title:{
+      //         startsWith:"H"
+      //       }
+      //     },
+      //     {
+      //       title:{
+      //         startsWith:"T"
+      //       }
+      //     },
 
-        ]
-      }
+      //   ]
+      // }
     });
-    return res.json({ status: 200, data: allPosts });
+
+    // total Post
+    const totalPosts=await prisma.post.count()
+    const totalPages= Math.ceil(totalPosts/limit)
+
+    return res.json({ status: 200, data: allPosts,pagination:{
+      totalPages,
+      currentPage:page,
+      limit:limit
+    } });
   } catch (error) {}
 };
 
