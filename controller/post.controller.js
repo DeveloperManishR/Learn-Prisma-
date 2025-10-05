@@ -63,17 +63,43 @@ export const fetchPosts = async (req, res) => {
       //   comment:true
       // }
 
-      include :{
-        comment:{
-          include:{
-           // user :true // fetch whole data
-            user:{
-              select:{
-                name:true
-              }
+      // include :{
+      //   comment:{
+      //     include:{
+      //      // user :true // fetch whole data
+      //       user:{
+      //         select:{
+      //           name:true
+      //         }
+      //       }
+      //       }
+      //   }
+      // },
+      // orderBy: {
+      //   id: "desc",
+      // },
+      where:{
+        // comment_count:{
+        //   gt:1
+        // }
+        // title:{
+        //   startsWith:"H"
+        // }
+      
+        // and and or condtion inwhich and is used for both condtion are true 
+        OR:[
+          {
+            title:{
+              startsWith:"H"
             }
+          },
+          {
+            title:{
+              startsWith:"T"
             }
-        }
+          },
+
+        ]
       }
     });
     return res.json({ status: 200, data: allPosts });
@@ -90,3 +116,28 @@ export const deletePost = async (req, res) => {
 
   return res.json({ status: 200, msg: "Post deleted successfully" });
 };
+
+export const searchPost=async(req,res)=>{
+  
+  try{
+   
+    const {query}=req.query
+
+    console.log("efrgeb",query)
+
+    const posts =await prisma.post.findMany({ 
+      where:{
+        description:{ 
+          search:query
+        }
+      }
+    })
+
+    return res.json({
+      status:200,
+      data:posts
+    })
+  }catch(err){
+
+  }
+}
