@@ -1,89 +1,143 @@
 import prisma from "../db/db.config.js";
+import {
+  comparePassword,
+  hashedPassword,
+} from "../middleware/auth.middleware.js";
+import jwt from "jsonwebtoken";
+import {
+  sucessResponse,
+  errorResponse,
+  HTTP_STATUS,
+} from "../utils/response.js";
 
-export const createUser = async (req, res) => {
+const generateTokens = (userId) => {
+  const accessToken = jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, {
+    expiresIn: parseInt(process.env.EXPIRE_ACCESS_TOKEN_TIME),
+  });
+
+  const refreshToken = jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET, {
+    expiresIn: parseInt(process.env.EXPIRE_REFRESH_TOKEN_TIME),
+  });
+  return { accessToken, refreshToken };
+};
+
+const setCookies = (res, accessToken, refreshToken) => {
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true, // prevent XSS attacks, cross site scripting attack
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict", // prevents CSRF attack, cross-site request forgery attack
+    maxAge: process.env.EXPIRE_ACCESS_TOKEN_TIME * 1000
+  });
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true, // prevent XSS attacks, cross site scripting attack
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict", // prevents CSRF attack, cross-site request forgery attack
+    maxAge: process.env.EXPIRE_REFRESH_TOKEN_TIME * 1000
+  
+  });
+};
+
+export const loginUser = async (req, res) => {
   try {
-    console.log("reg", req.body);
-    const { name, email, password } = req.body;
+    const { email, password } = req.body;
 
-    const findUser = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
       where: {
         email: email,
       },
     });
-    if (findUser) {
-      return res.json({ status: 400, message: "email already taken" });
+
+    if (!user) {
+      return errorResponse(res, HTTP_STATUS.NOT_FOUND, "Email not found");
     }
 
-    const newUser = await prisma.user.create({
-      data: {
-        name: name,
-        email: email,
-        password: password,
-      },
-    });
+    const checkPassword = await comparePassword(password, user.password);
 
-    return res.json({
-      status: 200,
-      data: newUser,
-      msg: "user created successfully",
-    });
+    if (!checkPassword) {
+      return errorResponse(res, HTTP_STATUS.UNAUTHORIZED, "Incorrect password");
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user.id);
+
+    setCookies(res, accessToken, refreshToken);
+
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+
+    return sucessResponse(
+      res,
+      HTTP_STATUS.OK,
+      "Login successfully",
+      userWithoutPassword
+    );
   } catch (error) {
-    console.log(error);
+    console.error("Login error:", error);
+    return errorResponse(
+      res,
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      "Login failed",
+      error.message
+    );
   }
 };
 
-export const login = () => {
+export const registerUser = async (req, res) => {
   try {
-  } catch (error) {}
-};
+    const { name, email, password } = req.body;
 
-export const updateUser = async (req, res) => {
-  const userId = req.params.id;
-  const { name, email, password } = req.body;
-
-  try {
-    await prisma.user.update({
+    const user = await prisma.user.findFirst({
       where: {
-        id: Number(userId),
+        email: email,
       },
+    });
+
+    if (user) {
+      return errorResponse(res, HTTP_STATUS.CONFLICT, "Email already exists");
+    }
+
+    const hashPassword = await hashedPassword(password);
+
+    const createUser = await prisma.user.create({
       data: {
         name,
         email,
-        password,
+        password: hashPassword,
       },
     });
 
-    return res.json({ status: 200, message: "User updated successfully" });
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = createUser;
+
+    return sucessResponse(
+      res,
+      HTTP_STATUS.CREATED,
+      "User created successfully",
+      userWithoutPassword
+    );
   } catch (error) {
-    console.log("err", error);
+    console.error("Registration error:", error);
+    return errorResponse(
+      res,
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      "Registration failed",
+      error.message
+    );
   }
 };
 
-export const fetchUsers = async (req, res) => {
-  try {
-    const allUsers = await prisma.user.findMany({
-      // userData with its post count
 
-      // select:{
-      //  _count:{
-      //   select:{
-      //     post:true
-      //   }
-      //  }
-      // }
+export const profileUser=(req,res)=>{
+  try{
+ 
+  }catch(error){
 
-      include: {
-        //  post:true //want all data from post field
-        //comment:true, //want all data from cooment field
-        post: {
-          //want specific data
-          select: {
-            title: true,
-            comment_count: true,
-          },
-        },
-      },
-    });
-    return res.json({ status: 200, data: allUsers });
-  } catch (error) {}
-};
+  }
+}
+
+export const updateProfile=()=>{
+  try{
+
+  }catch(error){
+    
+  }
+}
