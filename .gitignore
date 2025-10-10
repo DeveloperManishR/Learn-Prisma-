@@ -1,5 +1,42 @@
-node_modules
-# Keep environment variables out of version control
-.env
+# Node.js modules
+node_modules/
 
-/generated/prisma
+# Environment variables
+.env
+.env.*.local
+
+# Prisma generated client
+# This path might vary based on your generator output configuration
+# Common paths include:
+# prisma/generated/
+# node_modules/.prisma/client/
+# If you've customized the output path for Prisma Client, add that path here.
+# Example: if your schema has `output = "../generated/prisma-client"`, then add `generated/prisma-client/`
+# If using the default output path in `node_modules`, you might not need to explicitly add it if `node_modules/` is already ignored.
+# However, if you have specific binaries or platform-specific files within the generated client that cause issues,
+# you might need to be more precise, for example:
+# node_modules/.prisma/client/query-engine-*
+# node_modules/.prisma/client/libquery_engine-*
+
+# Prisma migration files (if you don't want to track them in Git)
+# migrations/ # Uncomment if you don't want to track migration files in Git.
+              # Generally, migration files are tracked to ensure database schema evolution is versioned.
+
+# Build artifacts
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.bak
+
+/public

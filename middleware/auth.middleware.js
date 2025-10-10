@@ -16,8 +16,6 @@ export const authenticateUser = async (req, res, next) => {
     // use req.cookies (plural) not req.cookie
     const accessToken = req.cookies?.accessToken;
 
-    
-
     if (!accessToken) {
       return errorResponse(
         res,
@@ -27,7 +25,7 @@ export const authenticateUser = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
-    
+
     if (!decoded || !decoded.userId) {
       return res.status(401).json({ message: "Invalid token payload" });
     }

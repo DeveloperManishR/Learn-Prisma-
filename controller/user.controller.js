@@ -9,6 +9,7 @@ import {
   errorResponse,
   HTTP_STATUS,
 } from "../utils/response.js";
+import { sendEmail } from "../config/mailer.js";
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, {
@@ -26,14 +27,13 @@ const setCookies = (res, accessToken, refreshToken) => {
     httpOnly: true, // prevent XSS attacks, cross site scripting attack
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict", // prevents CSRF attack, cross-site request forgery attack
-    maxAge: process.env.EXPIRE_ACCESS_TOKEN_TIME * 1000
+    maxAge: process.env.EXPIRE_ACCESS_TOKEN_TIME * 1000,
   });
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true, // prevent XSS attacks, cross site scripting attack
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict", // prevents CSRF attack, cross-site request forgery attack
-    maxAge: process.env.EXPIRE_REFRESH_TOKEN_TIME * 1000
-  
+    maxAge: process.env.EXPIRE_REFRESH_TOKEN_TIME * 1000,
   });
 };
 
@@ -58,6 +58,15 @@ export const loginUser = async (req, res) => {
     }
 
     const { accessToken, refreshToken } = generateTokens(user.id);
+
+    await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        refreshToken: refreshToken,
+      },
+    });
 
     setCookies(res, accessToken, refreshToken);
 
@@ -125,19 +134,81 @@ export const registerUser = async (req, res) => {
   }
 };
 
+export const profileUser = (req, res) => {
+  try {
+  } catch (error) {}
+};
 
-export const profileUser=(req,res)=>{
-  try{
- 
-  }catch(error){
+export const updateProfile = () => {
+  try {
+  } catch (error) {}
+};
 
+export const sendTestEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const payload = {
+      toEmail: email,
+      subject: "Test Email",
+      body: "<h1>Test Email</h1>",
+    };
+    console.log("payloadpayload", payload);
+
+    await sendEmail(payload.toEmail, payload.subject, payload.body);
+    return sucessResponse(res, HTTP_STATUS.OK, "Email sent successfully");
+  } catch (error) {
+    console.log("err", error);
   }
-}
+};
 
-export const updateProfile=()=>{
-  try{
+export const refreshToken = async (req, res) => {
+  const incomingRefreshToken = req?.cookies?.refreshToken;
 
-  }catch(error){
-    
+  try {
+    if (!incomingRefreshToken) {
+      return errorResponse(res, HTTP_STATUS.UNAUTHORIZED, "No refresh token");
+    }
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: decodedToken.userId,
+      },
+    });
+    if (!user) {
+      return errorResponse(res, HTTP_STATUS.UNAUTHORIZED, "User not found");
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      return errorResponse(
+        res,
+        HTTP_STATUS.UNAUTHORIZED,
+        "Refresh Token is Expired"
+      );
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user.id);
+
+     await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        refreshToken: refreshToken,
+      },
+    });
+
+    setCookies(res, accessToken, refreshToken);
+
+    return sucessResponse(res, HTTP_STATUS.OK, "Access token refreshed", {
+      accessToken,
+      refreshToken,
+    });
+  } catch (err) {
+    console.log("etwr3ef", err);
   }
-}
+};
